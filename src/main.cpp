@@ -93,7 +93,7 @@ std::array<char,12> CommandInput();
 
 std::span<const std::string_view> TakingParagraph(StoryState state);
 
-CombatMode CombatModeSelectionProcess();
+CombatMode CombatModeSelectionProcess(Stats& p, Stats& e);
 
 // UI Display
 void DisplayMainMenu();
@@ -176,9 +176,17 @@ void GameProcessing(){
 
 std::array<char,12> CommandInput(){  
     std::array<char,12> input;
-    std::cout << "Input: ";
-    std::cin.getline(input.data(),input.size());
-    return input;
+    while(true){
+        std::cout << "Input: ";
+        std::cin.getline(input.data(),input.size());
+
+        if(std::cin.fail()){
+            std::cin.clear();
+            std::cin.ignore(10000,'\n');
+            return input; 
+        }
+        return input;
+    }
 }
 
 std::span<const std::string_view> TakingParagraph(StoryState state){
@@ -244,15 +252,15 @@ void CombatProcess(Stats& a, Stats& b){
             enemyPtr = &a;
           }
     }
-       while(true){
+    while(true){
         AdjustingStatsWithWeapon(a,b);
         if(yourTurn){
             
             std::cout << "YOUR TURN" << std::endl;
             std::this_thread::sleep_for(1500ms);
             std::system("clear");
-            CombatDisplay(*playerPtr, *enemyPtr);
-            CombatMode decision = CombatModeSelectionProcess();
+
+            CombatMode decision = CombatModeSelectionProcess(*playerPtr, *enemyPtr);
            
             if(decision == CombatMode::Attack){
                 AttackTurn(*playerPtr, *enemyPtr);
@@ -326,14 +334,16 @@ void AdjustingStatsWithWeapon(Stats& p, Stats& e){
    e.damage = e.useWeapon.damage; 
 }
 
-CombatMode CombatModeSelectionProcess(){
+CombatMode CombatModeSelectionProcess(Stats& p, Stats& e){
 
     CombatMode mode;
-    ModeSelectionDisplay();
- 
     while (true)
     {
-        std::array<char, 12> inputRaw = CommandInput();  
+        CombatDisplay(p,e);
+        ModeSelectionDisplay();
+
+        std::array<char, 12> inputRaw = CommandInput();
+
         std::string_view input = inputRaw.data();
         
         if(input == "1" || input == "attack"){
@@ -341,7 +351,12 @@ CombatMode CombatModeSelectionProcess(){
         }
         else if(input == "2" || input == "defence"){
             return CombatMode::Defence; 
-        }       
+        }else{
+            std::system("clear");
+            std::cout << "WRONG INPUT!!" << std::endl;
+            std::this_thread::sleep_for(500ms);
+            std::system("clear");
+        }
     } 
    return CombatMode::None;
 }
@@ -372,9 +387,7 @@ void ModeSelectionDisplay(){
 
 void CombatDisplay(Stats& p, Stats& e){
     EnemyCombatInformationDisplay(e); 
-
     std::cout << std::endl;
     std::cout << std::endl;
-
     PlayerCombatInformationDisplay(p);
 }
